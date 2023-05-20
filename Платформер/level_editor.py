@@ -13,7 +13,7 @@ tile_size = 50
 cols = 20
 margin = 100
 screen_width = tile_size * cols
-screen_height = 900
+screen_height = 1000
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Level Editor')
@@ -27,6 +27,7 @@ bg_img = pygame.transform.scale(bg_img, (screen_width, screen_height - margin))
 dirt_img = pygame.image.load('img/dirt.png')
 grass_img = pygame.image.load('img/grass.png')
 blob_img = pygame.image.load('img/blob.png')
+bat_img = pygame.image.load('img/bat.png')
 platform_x_img = pygame.image.load('img/platform_x.png')
 platform_y_img = pygame.image.load('img/platform_y.png')
 lava_img = pygame.image.load('img/lava.png')
@@ -38,13 +39,13 @@ load_img = pygame.image.load('img/load_btn.png')
 
 
 clicked = False
-level = 1
+level = 8
 
 
 white = (255, 255, 255)
 green = (144, 201, 120)
 
-font = pygame.font.SysFont('Futura', 24)
+font = pygame.font.SysFont('Arial', 24)
 
 
 world_data = []
@@ -108,6 +109,10 @@ def draw_world():
 					#exit
 					img = pygame.transform.scale(exit_img, (tile_size, int(tile_size * 1.5)))
 					screen.blit(img, (col * tile_size, row * tile_size - (tile_size // 2)))
+				if world_data[row][col] == 9:
+					#enemy blocks
+					img = pygame.transform.scale(bat_img, (tile_size, int(tile_size * 0.75)))
+					screen.blit(img, (col * tile_size, row * tile_size + (tile_size * 0.25)))
 
 
 
@@ -139,8 +144,8 @@ class Button():
 		return action
 
 
-save_button = Button(screen_width // 2 - 150, screen_height - 80, save_img)
-load_button = Button(screen_width // 2 + 50, screen_height - 80, load_img)
+save_button = Button(600, 300, save_img)
+load_button = Button(500,  300, load_img)
 
 
 game = True
@@ -190,12 +195,12 @@ while game:
 
 				if pygame.mouse.get_pressed()[0] == 1:
 					world_data[y][x] += 1
-					if world_data[y][x] > 8:
+					if world_data[y][x] > 9:
 						world_data[y][x] = 0
 				elif pygame.mouse.get_pressed()[2] == 1:
 					world_data[y][x] -= 1
 					if world_data[y][x] < 0:
-						world_data[y][x] = 8
+						world_data[y][x] = 9
 		if event.type == pygame.MOUSEBUTTONUP:
 			clicked = False
 

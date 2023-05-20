@@ -3,23 +3,33 @@ from pygame.locals import *
 from pygame import mixer
 import pickle
 from os import path
-
+import json
 pygame.mixer.pre_init(44100, -16, 2, 512)
 mixer.init()
 pygame.init()
 
 clock = pygame.time.Clock()
 fps = 60
-
+scores = {
+    	"Результати": {
+        "смерті": [],
+        "монети": []
+    }
+}
+# with open("scores.json", "w", encoding="utf-8") as file:
+#    json.dump(scores, file)
+with open("scores.json", "r", encoding="utf-8") as file:
+    scores = json.load(file)
 screen_width = 1000
 screen_height = 1000
+
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Platformer')
 
 
 
-font = pygame.font.SysFont('Bauhaus 93', 70)
+font = pygame.font.SysFont('Arial', 70)
 font_score = pygame.font.SysFont('Bauhaus 93', 30)
 
 
@@ -27,8 +37,9 @@ font_score = pygame.font.SysFont('Bauhaus 93', 30)
 tile_size = 50
 game_over = 0
 main_menu = True
+deaths = 0
 level = 0
-max_levels = 7
+max_levels = 8
 score = 0
 
 
@@ -67,6 +78,7 @@ def reset_level(level):
 	coin_group.empty()
 	lava_group.empty()
 	exit_group.empty()
+	bat_group.empty()
 
 
 	if path.exists(f'level{level}_data'):
@@ -303,6 +315,9 @@ class World():
 				if tile == 8:
 					exit = Exit(col_count * tile_size, row_count * tile_size - (tile_size // 2))
 					exit_group.add(exit)
+				if tile == 9:
+					bat = Bat(col_count * tile_size, row_count * tile_size + 15)
+					bat_group.add(bat)
 				col_count += 1
 			row_count += 1
 
@@ -329,7 +344,22 @@ class Enemy(pygame.sprite.Sprite):
 		if abs(self.move_counter) > 50:
 			self.move_direction *= -1
 			self.move_counter *= -1
+class Bat(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.image.load('img/bat.png')
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+		self.move_direction = 1
+		self.move_counter = 0
 
+	def update(self):
+		self.rect.x += self.move_direction
+		self.move_counter += 1
+		if abs(self.move_counter) > 50:
+			self.move_direction *= -1
+			self.move_counter *= -1
 
 class Platform(pygame.sprite.Sprite):
 	def __init__(self, x, y, move_x, move_y):
@@ -394,7 +424,7 @@ platform_group = pygame.sprite.Group()
 lava_group = pygame.sprite.Group()
 coin_group = pygame.sprite.Group()
 exit_group = pygame.sprite.Group()
-
+bat_group = pygame.sprite.Group()
 
 score_coin = Coin(tile_size // 2, tile_size // 2)
 coin_group.add(score_coin)
@@ -411,7 +441,7 @@ restart_button = Button(screen_width // 2 - 50, screen_height // 2 + 100, restar
 start_button = Button(screen_width // 2 - 350, screen_height // 2, start_img)
 exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_img)
 
-
+a = True
 game = True
 while game:
 
@@ -430,7 +460,10 @@ while game:
 
 		if game_over == 0:
 			blob_group.update()
+			bat_group.update()
 			platform_group.update()
+			if pygame.sprite.spritecollide(player, bat_group, True):
+				game_over=-1
 
 			if pygame.sprite.spritecollide(player, coin_group, True):
 				score += 1
@@ -442,6 +475,7 @@ while game:
 		lava_group.draw(screen)
 		coin_group.draw(screen)
 		exit_group.draw(screen)
+		bat_group.draw(screen)
 
 		game_over = player.update(game_over)
 
@@ -451,28 +485,42 @@ while game:
 				world = reset_level(level)
 				game_over = 0
 				score = 0
+				deaths+=1
 
 
 		if game_over == 1:
-
 			level += 1
 			if level <= max_levels:
-
 				world_data = []
 				world = reset_level(level)
 				game_over = 0
 			else:
-				draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
+				
+				draw_text('YOU WIN!', font, blue, (screen_width // 2) , screen_height // 2-140)
+				draw_text(f'You died {deaths} times', font, blue, (screen_width // 2-200) , screen_height // 2)
+				draw_text(f'You collected {scores} coins', font, blue, (screen_width // 2-200) , screen_height // 2-280)
+				if a:
+					scores['Результати']['монети'].append(score)
+					scores['Результати']['смерті'].append(deaths)
+
+					# Записати оновлені результати назад у файл JSON
+					with open("scores.json", "w", encoding="utf-8") as file:
+						json.dump(scores, file, indent=4, ensure_ascii=False)
+					
+					a = False
 				if restart_button.draw():
-					level = 1
+					level = 0
 
 					world_data = []
 					world = reset_level(level)
 					game_over = 0
 					score = 0
+					deaths = 0
+					a = True
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
+
 			game = False
 
 	pygame.display.update()
